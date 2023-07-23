@@ -1,0 +1,100 @@
+#Import required libraries
+import rasterio
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from mpl_toolkits. axes_grid1 import make_axes_locatable
+
+# Open Raster 
+lakeRst = rasterio.open('D:\Lake_Xau\WAM\WAM26.tif')
+lakeRst.count
+
+# Raster resolution
+lakeRst.res
+
+#all raster crs info
+lakeRst.crs.wkt
+
+# Get Raster values as Numpy
+lakeBottom = lakeRst.read(1)
+
+# raster sample
+lake Bottom[12:491272455081228,12:491272455081228]
+
+# Replace value for np.nan
+noDatavalue = np.copy(lakeBottom[0,0])
+lakeBottom[lakeBottom==noDatavalue] = np.nan
+
+# Plot raster 
+plt.figure(figsize=(12,12))
+plt.imshow(lakeBottom)
+plt. show()
+
+# Lake Volume Calculation 
+# get raster minimum and maximum 
+minElev = np.nanmin(lakeBottom)
+maxElev = np.nanmax(lakeBottom)
+print('Min bottom elevation %.2f m., max bottom elevation %.2f m.'%(minElev,maxElev))
+
+# steps for calculation
+nSteps = 16
+# lake bottom elevation intervals
+elevSteps = np.round(np.linspace(minElev,maxElev,nSteps),0)
+elevSteps
+
+# definition of volume function
+def calculateVol(elevStep,elevDem,lakeRst):
+ tempDem = elevStep - elevDem[elevDem<elevStep]
+ tempVol = tempDem.sum()*lakeRst.res[0]*lakeRst.res[1]
+ return tempVol
+
+# calculate volumes for each elevation
+volArray = []
+for elev in elevSteps:
+ tempVol = calculateVol(elev,lakeBottom,lakeRst)
+ volArray.append(tempVol) 
+
+# print output 
+print("Lake bottom elevations %s"%elevSteps)
+volArrayMCM = [round(i/1000000,2) for i in volArray]
+print("Lake volume in million of cubic meters %s"%volArrayMCM) 
+
+# plot values
+fig, ax = plt.subplots(figsize=(12,5))
+ax.plot(volArrayMCM,elevSteps,label='lake Xau(LX)')
+ax.grid()
+ax.legend()
+ax.set_xlabel('Volume MCM')
+ax.set_ylabel('Elevation (masl)')
+plt.show() 
+
+# plot values
+fig, [ax1, ax2] = plt.subplots(1,2,figsize=(20,8),gridspec_kw={'width_ratios': [2, 1]})
+ax1.set_title('Lake bottom elevation')
+botElev = ax1.imshow(lakeBottom)
+divider = make_axes_locatable(ax1)
+cax = divider.append_axes('bottom', size='5%', pad=0.5)
+fig.colorbar(botElev, cax=cax, orientation='horizontal', label='Elevation (masl)') 
+ax2.plot(volArrayMCM,elevSteps,label='Lake Xau(LX)')
+ax2.grid()
+ax2.legend()
+ax2.set_xlabel('Volume MCM')
+ax2.set_ylabel('Elevation (masl)')
+plt.show()
+#definig AVE curve data
+df=pd.read_csv("D:\Lake_Xau\WAM\AVE26(Maximum_LX).csv")
+df.head()
+
+# plotting AVE curve
+fig, ax1 = plt.subplots(figsize=(10,6))
+ax1.plot(df['Volume (MCM)'], df['Level (m)'],color="orange")
+ax1.set_title('AVE Curve for LX in September 2012')
+ax1.set_xlabel('Volume (MCM)')
+ax1.set_ylabel('Elevation (m)')
+ax1.grid()
+ax2 = ax1.twiny()
+ax2.plot(df['Area (ha)'], df['Level (m)'])
+ax2.set_xlabel('Area (ha)')
+plt.gca().invert_xaxis()
+plt.show()
+plt.legend()
